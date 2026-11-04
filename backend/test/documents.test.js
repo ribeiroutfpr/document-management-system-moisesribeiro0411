@@ -92,6 +92,36 @@ test('API de documentos', async (t) => {
     assert.deepEqual(await response.json(), { documents: [second, document] });
   });
 
+  await t.test('upload sem autenticação não grava arquivos nem metadados', async () => {
+    const filesBefore = (await fs.readdir(storageDirectory)).sort();
+    const documentsBefore = await repository.findAll();
+    const body = new FormData();
+    body.append('file', new Blob(['não deve ser gravado']), 'nao-autorizado.txt');
+
+    await expectError(await unauthenticatedRequest('/upload', {
+      method: 'POST', body,
+    }), 401, 'UNAUTHORIZED');
+
+    assert.deepEqual((await fs.readdir(storageDirectory)).sort(), filesBefore);
+    assert.deepEqual(await repository.findAll(), documentsBefore);
+  });
+
+  await t.test('listagem não permite selecionar outro usuário pela query string', async () => {
+    const response = await request('/documents?owner=test-instance', {
+      headers: { 'x-authenticated-user': 'other-user' },
+    });
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { documents: [] });
+  });
+
+  await t.test('download sem autenticação não expõe o arquivo', async () => {
+    const response = await unauthenticatedRequest(`/documents/${document.id}/download`);
+
+    assert.equal(response.headers.get('content-disposition'), null);
+    await expectError(response, 401, 'UNAUTHORIZED');
+  });
+
   await t.test('contabiliza arquivos órfãos na cota de disco', async () => {
     const orphanPath = path.join(storageDirectory, 'arquivo-orfao.txt');
     await fs.writeFile(orphanPath, Buffer.alloc(1048577));
