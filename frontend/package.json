@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test test/api.test.js && vitest run test/components.test.js",
     "preview": "vite preview"
   },
   "engines": {
@@ -17,7 +18,11 @@
     "react-dom": "19.2.7"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@vitejs/plugin-react": "6.0.3",
-    "vite": "8.0.16"
+    "jsdom": "^30.1.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
   }
 }
