@@ -25,10 +25,20 @@ async function request(path, options) {
   return response;
 }
 
+function isPublicDocument(document) {
+  return document !== null && typeof document === 'object'
+    && typeof document.id === 'string'
+    && typeof document.originalName === 'string'
+    && Number.isSafeInteger(document.size) && document.size >= 0
+    && typeof document.uploadedAt === 'string'
+    && Number.isFinite(Date.parse(document.uploadedAt))
+    && typeof document.owner === 'string';
+}
+
 export async function listDocuments({ signal } = {}) {
   const response = await request('/documents', { signal });
   const data = await readJson(response);
-  if (!Array.isArray(data.documents)) {
+  if (!Array.isArray(data.documents) || !data.documents.every(isPublicDocument)) {
     throw new Error('O servidor retornou uma lista de documentos inválida.');
   }
   return data.documents;
@@ -38,7 +48,11 @@ export async function uploadDocument(file) {
   const body = new FormData();
   body.append('file', file);
   const response = await request('/upload', { method: 'POST', body });
-  return readJson(response);
+  const document = await readJson(response);
+  if (!isPublicDocument(document)) {
+    throw new Error('O servidor retornou um documento inválido.');
+  }
+  return document;
 }
 
 export async function downloadDocument(id) {
